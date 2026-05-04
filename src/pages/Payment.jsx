@@ -18,7 +18,9 @@ const Payment = () => {
 
     useEffect(() => {
         if (!facility) {
-            navigate(-1);
+            console.error("Payment page: facility is missing from location.state. Redirecting back in 3s...");
+            const t = setTimeout(() => navigate(-1), 3000);
+            return () => clearTimeout(t);
         }
     }, [facility, navigate]);
 
@@ -33,7 +35,46 @@ const Payment = () => {
         return () => clearInterval(timer);
     }, [bookingState, timeLeft]);
 
-    if (!facility) return null;
+    if (!facility) {
+        return (
+            <div className="container animate-fade-in" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+                <AlertTriangle size={48} color="var(--danger)" style={{ marginBottom: '1rem' }} />
+                <h2>Error Loading Payment Details</h2>
+                <p className="text-muted">Missing facility information. Redirecting back...</p>
+            </div>
+        );
+    }
+
+    const generateAppointmentTime = (timingsStr) => {
+        try {
+            if (!timingsStr || !timingsStr.includes('-')) return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            const [startStr, endStr] = timingsStr.split('-').map(s => s.trim());
+            
+            const parseTime = (timeStr) => {
+                const [time, period] = timeStr.split(' ');
+                let [hours, minutes] = time.split(':').map(Number);
+                if (period === 'PM' && hours !== 12) hours += 12;
+                if (period === 'AM' && hours === 12) hours = 0;
+                return hours * 60 + (minutes || 0);
+            };
+            
+            const startMins = parseTime(startStr);
+            const endMins = parseTime(endStr);
+            
+            const randomMins = startMins + Math.floor(Math.random() * (endMins - startMins));
+            const h = Math.floor(randomMins / 60);
+            const m = randomMins % 60;
+            
+            const period = h >= 12 ? 'PM' : 'AM';
+            const displayH = h % 12 || 12;
+            const displayM = m < 10 ? '0' + m : m;
+            
+            return `${displayH}:${displayM} ${period}`;
+        } catch(e) {
+            return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+    };
 
     const handleConfirmBooking = (isUpiSuccess = false) => {
         if (!paymentMethod && !isUpiSuccess) return;
@@ -61,6 +102,7 @@ const Payment = () => {
             };
 
             const tokenNo = `TKN-${Math.floor(Math.random() * 90000) + 10000}`;
+            const generatedTime = generateAppointmentTime(facility.timings);
 
             const payload = {
                 tokenNo,
@@ -69,6 +111,7 @@ const Payment = () => {
                 patient: patientData,
                 triageReport: triageData.transcript,
                 paymentMode: isUpiSuccess ? 'Online (UPI)' : 'Pay on Visit',
+                appointmentTime: generatedTime,
                 timestamp: new Date().toISOString()
             };
 
@@ -80,7 +123,7 @@ const Payment = () => {
                 hospital: facility.name,
                 status: 'Confirmed',
                 date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }),
-                time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                time: generatedTime,
                 payload
             };
             
@@ -89,7 +132,8 @@ const Payment = () => {
 
             setBookingState({
                 token: tokenNo,
-                qrPayload: JSON.stringify(payload)
+                qrPayload: JSON.stringify(payload),
+                appointmentTime: generatedTime
             });
         }, 1500);
     };
@@ -333,7 +377,11 @@ const Payment = () => {
                 <div className="card animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '3rem 2rem', textAlign: 'center' }}>
                     <CheckCircle2 size={72} color="var(--secondary)" style={{ marginBottom: '1.5rem' }} />
                     <h1 style={{ marginBottom: '0.5rem', color: 'var(--text-main)', fontSize: '2.5rem' }}>Booking Confirmed!</h1>
-                    <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '1.1rem' }}>Show this QR code at {facility.name}</p>
+                    <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '1.1rem' }}>Show this QR code at {facility.name}</p>
+
+                    <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '0.75rem 1.5rem', borderRadius: '2rem', fontWeight: 'bold', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Clock size={20} /> Appointment Time: {bookingState.appointmentTime}
+                    </div>
 
                     <div style={{ background: 'white', padding: '1.5rem', borderRadius: '1rem', border: '1px solid var(--border)', display: 'inline-block', marginBottom: '2rem', boxShadow: 'var(--shadow-md)' }}>
                         <QRCodeSVG id="qr-code-svg" value={bookingState.qrPayload} size={220} />

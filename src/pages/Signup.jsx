@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, UserCircle, Mail, Phone, Lock, Globe, Loader2 } from 'lucide-react';
+import { User, UserCircle, Mail, Phone, Lock, Globe, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const Signup = () => {
     const [formData, setFormData] = useState({
         fullName: '', phone: '', email: '', username: '', password: '', preferredLanguage: 'en'
     });
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -28,6 +29,7 @@ const Signup = () => {
             const data = await res.json();
             
             if (res.ok) {
+                localStorage.setItem('mockUser', JSON.stringify(formData));
                 navigate('/login');
             } else {
                 setError(data.error || 'Signup failed');
@@ -90,7 +92,28 @@ const Signup = () => {
                         <label className="form-label">Password</label>
                         <div style={{ position: 'relative' }}>
                             <Lock size={20} style={{ position: 'absolute', top: '12px', left: '12px', color: 'var(--text-muted)' }} />
-                            <input type="password" name="password" className="form-control" style={{ paddingLeft: '2.5rem' }} value={formData.password} onChange={handleChange} required />
+                            <input type={showPassword ? 'text' : 'password'} name="password" className="form-control" style={{ paddingLeft: '2.5rem' }} value={formData.password} onChange={handleChange} required />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword((prev) => !prev)}
+                                style={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    right: '0.75rem',
+                                    transform: 'translateY(-50%)',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    cursor: 'pointer',
+                                    color: 'var(--text-muted)',
+                                    padding: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
                     </div>
 

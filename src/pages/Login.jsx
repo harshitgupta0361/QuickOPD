@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserCircle, Lock, Loader2, Phone, Mail, CheckCircle2 } from 'lucide-react';
+import { UserCircle, Lock, Loader2, Phone, Mail, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 const Login = () => {
     const [loginMethod, setLoginMethod] = useState('phone'); // phone, email, username
     const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [otp, setOtp] = useState('');
+    const [generatedOtp, setGeneratedOtp] = useState('');
     const [otpSent, setOtpSent] = useState(false);
     
     const [error, setError] = useState('');
@@ -37,6 +39,9 @@ const Login = () => {
             return;
         }
 
+        const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+        setGeneratedOtp(newOtp);
+        setOtp('');
         setError('');
         setLoading(true);
         // Mock sending OTP
@@ -44,6 +49,7 @@ const Login = () => {
             setOtpSent(true);
             setLoading(false);
             // OTP is sent
+            alert(`Your QuickOPD verification OTP is: ${newOtp}`);
         }, 1000);
     };
 
@@ -79,21 +85,25 @@ const Login = () => {
             
             if (!mockUser) {
                 setError('No registered user found. Please sign up first.');
-            } else if (loginMethod === 'phone' && otpSent && otp.length >= 4) {
-                if (mockUser.phone === identifier) {
-                    localStorage.setItem('user', JSON.stringify(mockUser));
-                    setLanguage(mockUser.preferredLanguage || 'en');
-                    navigate('/');
-                } else {
+            } else if (loginMethod === 'phone' && otpSent) {
+                if (mockUser.phone !== identifier) {
                     setError('Phone number does not match any account.');
-                }
-            } else if (loginMethod === 'email' && otpSent && otp.length >= 4) {
-                if (mockUser.email === identifier) {
+                } else if (otp !== generatedOtp) {
+                    setError('Invalid OTP. Please enter the code we sent.');
+                } else {
                     localStorage.setItem('user', JSON.stringify(mockUser));
                     setLanguage(mockUser.preferredLanguage || 'en');
                     navigate('/');
-                } else {
+                }
+            } else if (loginMethod === 'email' && otpSent) {
+                if (mockUser.email !== identifier) {
                     setError('Email does not match any account.');
+                } else if (otp !== generatedOtp) {
+                    setError('Invalid OTP. Please enter the code we sent.');
+                } else {
+                    localStorage.setItem('user', JSON.stringify(mockUser));
+                    setLanguage(mockUser.preferredLanguage || 'en');
+                    navigate('/');
                 }
             } else if (loginMethod === 'username' && identifier && password) {
                 if (mockUser.username === identifier && mockUser.password === password) {
@@ -129,17 +139,17 @@ const Login = () => {
                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: 'var(--bg-secondary)', padding: '0.25rem', borderRadius: '0.5rem' }}>
                     <button 
                         type="button"
-                        onClick={() => { setLoginMethod('phone'); setOtpSent(false); setError(''); setIdentifier(''); }}
+                        onClick={() => { setLoginMethod('phone'); setOtpSent(false); setGeneratedOtp(''); setOtp(''); setError(''); setIdentifier(''); }}
                         style={{ flex: 1, padding: '0.5rem', borderRadius: '0.25rem', border: 'none', background: loginMethod === 'phone' ? 'var(--primary)' : 'transparent', color: loginMethod === 'phone' ? 'white' : 'var(--text-main)', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.875rem', fontWeight: '500' }}
                     >Phone</button>
                     <button 
                         type="button"
-                        onClick={() => { setLoginMethod('email'); setOtpSent(false); setError(''); setIdentifier(''); }}
+                        onClick={() => { setLoginMethod('email'); setOtpSent(false); setGeneratedOtp(''); setOtp(''); setError(''); setIdentifier(''); }}
                         style={{ flex: 1, padding: '0.5rem', borderRadius: '0.25rem', border: 'none', background: loginMethod === 'email' ? 'var(--primary)' : 'transparent', color: loginMethod === 'email' ? 'white' : 'var(--text-main)', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.875rem', fontWeight: '500' }}
                     >Email</button>
                     <button 
                         type="button"
-                        onClick={() => { setLoginMethod('username'); setOtpSent(false); setError(''); setIdentifier(''); }}
+                        onClick={() => { setLoginMethod('username'); setOtpSent(false); setGeneratedOtp(''); setOtp(''); setError(''); setIdentifier(''); }}
                         style={{ flex: 1, padding: '0.5rem', borderRadius: '0.25rem', border: 'none', background: loginMethod === 'username' ? 'var(--primary)' : 'transparent', color: loginMethod === 'username' ? 'white' : 'var(--text-main)', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.875rem', fontWeight: '500' }}
                     >Username</button>
                 </div>
@@ -175,13 +185,34 @@ const Login = () => {
                             <div style={{ position: 'relative' }}>
                                 <Lock size={20} style={{ position: 'absolute', top: '12px', left: '12px', color: 'var(--text-muted)' }} />
                                 <input 
-                                    type="password" 
+                                    type={showPassword ? 'text' : 'password'} 
                                     className="form-control" 
                                     style={{ paddingLeft: '2.5rem' }}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required 
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((prev) => !prev)}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        right: '0.75rem',
+                                        transform: 'translateY(-50%)',
+                                        border: 'none',
+                                        background: 'transparent',
+                                        cursor: 'pointer',
+                                        color: 'var(--text-muted)',
+                                        padding: 0,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
                             </div>
                         </div>
                     ) : otpSent ? (

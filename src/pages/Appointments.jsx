@@ -1,18 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, XCircle, AlertTriangle, FastForward, CheckCircle2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, XCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 const Appointments = () => {
     const [appointments, setAppointments] = useState([]);
     const [cancelConfirmId, setCancelConfirmId] = useState(null);
-    
-    // Debug State for testing multi-day logic
-    const [debugTimeOffset, setDebugTimeOffset] = useState(0); 
-
-    const getCurrentTime = () => Date.now() + debugTimeOffset;
 
     useEffect(() => {
         const stored = JSON.parse(localStorage.getItem('myAppointments') || '[]');
-        const now = getCurrentTime();
+        const now = Date.now();
         const MS_IN_HOUR = 60 * 60 * 1000;
 
         const filtered = stored.filter(apt => {
@@ -44,7 +39,7 @@ const Appointments = () => {
         if (filtered.length !== stored.length) {
             localStorage.setItem('myAppointments', JSON.stringify(filtered));
         }
-    }, [debugTimeOffset]);
+    }, []);
 
     const handleCancelRequest = (id) => {
         setCancelConfirmId(id);
@@ -56,7 +51,7 @@ const Appointments = () => {
         const aptToCancel = appointments.find(apt => apt.id === cancelConfirmId);
         
         const updated = appointments.map(apt => 
-            apt.id === cancelConfirmId ? { ...apt, status: 'Cancelled', cancelledAt: getCurrentTime() } : apt
+            apt.id === cancelConfirmId ? { ...apt, status: 'Cancelled', cancelledAt: Date.now() } : apt
         );
         
         setAppointments(updated);
@@ -84,9 +79,9 @@ const Appointments = () => {
         const updated = appointments.map(apt => {
             if (apt.id === id) {
                 if (received) {
-                    return { ...apt, refundReceivedAt: getCurrentTime() };
+                    return { ...apt, refundReceivedAt: Date.now() };
                 } else {
-                    return { ...apt, refundDelayedAt: getCurrentTime() };
+                    return { ...apt, refundDelayedAt: Date.now() };
                 }
             }
             return apt;
@@ -97,7 +92,7 @@ const Appointments = () => {
     };
 
     const renderOnlineRefundStatus = (apt) => {
-        const now = getCurrentTime();
+        const now = Date.now();
         const cancelledAt = apt.cancelledAt || apt.id;
         const MS_IN_HOUR = 60 * 60 * 1000;
         const ageHours = (now - cancelledAt) / MS_IN_HOUR;
@@ -241,26 +236,6 @@ const Appointments = () => {
                     </div>
                 </div>
             )}
-
-            {/* Debug Tools - Hidden in production, useful for testing timeframes */}
-            <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 999, display: 'flex', gap: '0.5rem' }}>
-                <button 
-                    className="btn btn-primary" 
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '2rem', background: '#3B82F6', borderColor: '#3B82F6', boxShadow: 'var(--shadow-lg)' }}
-                    onClick={() => setDebugTimeOffset(prev => prev + (12 * 60 * 60 * 1000))}
-                    title="Simulate passing of 12 hours"
-                >
-                    <FastForward size={18} /> +12h
-                </button>
-                <button 
-                    className="btn btn-primary" 
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '2rem', background: '#8B5CF6', borderColor: '#8B5CF6', boxShadow: 'var(--shadow-lg)' }}
-                    onClick={() => setDebugTimeOffset(prev => prev + (24 * 60 * 60 * 1000))}
-                    title="Simulate passing of 24 hours"
-                >
-                    <FastForward size={18} /> +24h
-                </button>
-            </div>
         </div>
     );
 };
